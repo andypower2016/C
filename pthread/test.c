@@ -1,0 +1,183 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
+#include <semaphore.h>
+#include <pthread.h>
+
+#define print(format, args...) printf("[%s:%d]" format "\n", __FUNCTION__, __LINE__, ##args)
+/*sem_t sem;
+int sem_val;
+int count = 0;
+
+void printSemValue(char str[5])
+{
+  sem_getvalue(&sem, &sem_val);
+  printf("%s sem=%d\n",str, sem_val);
+}
+
+void* func_sem(void* args)
+{
+  struct arg *tmp = (struct arg*) args;
+  printf("thread %d waiting ...\n", tmp->id);
+  int ret = sem_wait(&sem);
+  if(ret == -1)
+  {
+    printf("sem is already zero\n");
+  }
+  printf("thread %d finished waiting ...\n", tmp->id);
+  return 0;
+}
+
+void* func_mutex(void* args)
+{
+  struct arg *tmp = (struct arg*) args;
+  printf("thread %d waiting ...\n", tmp->id);
+  pthread_mutex_lock(&mutex);
+  printf("thread %d aquired mutex ...\n", tmp->id);
+  int i = 0;
+  for(; i < 100 ; ++i)
+    count++;
+
+  pthread_cond_wait(&cond, &mutex);
+  printf("thread %d complete ...\n", tmp->id);
+  pthread_mutex_unlock(&mutex);
+  printf("thread %d released mutex ...\n", tmp->id);
+  return 0;
+}*/
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+
+struct arg 
+{
+  int id;
+};
+
+struct data
+{
+  int id;
+};
+
+struct queue
+{
+   struct data *queue_data[256];
+   int front;
+   int rear;
+   int size;
+} g_queue = {
+  .front = -1,
+  .rear = -1,
+  .size = 256,
+};
+
+void push_data(struct data *d)
+{
+   if(g_queue.rear < g_queue.size)
+   {
+      g_queue.queue_data[++g_queue.rear] = d;
+   }
+}
+void pop_data(struct data **d)
+{
+  if(g_queue.front < g_queue.rear)
+  {
+    *d = g_queue.queue_data[++g_queue.front];
+
+    if(g_queue.front == g_queue.rear) // queue has no data after pop
+    {
+      g_queue.front = g_queue.rear = -1;
+    }
+  }
+  else
+  {
+    print("Queue is empty");
+  }
+}
+
+int isEmpty()
+{
+   return g_queue.front >= g_queue.rear ? 1 : 0;
+}
+
+
+void queue_work_data(struct data* d)
+{
+  if(d)
+  {
+     print("push data");
+     pthread_mutex_lock(&mutex);
+     push_data(d);
+     pthread_cond_signal(&cond);
+     pthread_mutex_unlock(&mutex);
+  } 
+}
+
+typedef void(*callback)(struct data* d) ;
+
+
+int done = 0;
+void *run(void* fptr)
+{
+  callback worker = ((void*)(struct data*) fptr);
+  int i = 0;
+  while(i < 5)
+  {
+    // every 2 second gets data
+    struct data *d = (struct data*) malloc(sizeof(struct data));
+    d->id = ++i;
+    worker(d);
+    sleep(0.5);
+  }
+  done = 1;
+  return 0;
+}
+
+void *printdata(void* arg)
+{
+  while(!(done == 1 && isEmpty())) 
+  {
+    pthread_mutex_lock(&mutex);
+    if(isEmpty())
+    {
+      print("waiting for push");
+      pthread_cond_wait(&cond, &mutex);
+    }  
+    print("proceed");
+    struct data *d = NULL;
+    pop_data(&d);
+    pthread_mutex_unlock(&mutex);
+
+    if(d)
+    {
+        print("data id = %d", d->id);
+        sleep(2); // process 2 sec
+        free(d);
+    }
+    else
+    {
+      print("d is null");
+    }   
+  }
+  return 0;
+}
+
+int main(int argc, char** argv)
+{
+    
+    //sem_init(&sem, 0, 1);    
+    pthread_t t1, t2;
+    pthread_create(&t1,0,run,(void*) &queue_work_data);
+    pthread_create(&t2,0,printdata,NULL);
+    pthread_join(t1, 0);
+    pthread_join(t2, 0);
+    //sem_destroy(&sem);
+
+    /*struct data *d;
+    d = (struct data*) malloc(sizeof(struct data));
+    d->id = 6;
+    struct data *ptr = d;
+    printf("%d\n", ptr->id);*/
+    return 0;
+}
