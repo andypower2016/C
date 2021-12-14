@@ -127,18 +127,16 @@ void queue_work_data(struct data* d)
      {
         while(!ret) // retry
         {
-          pthread_mutex_unlock(&mutex);
           pthread_cond_signal(&cond);
-          sleep(1);
-          pthread_mutex_lock(&mutex);    
+          pthread_cond_wait(&cond, &mutex); 
           ret = push_data(d);
         }
         pthread_mutex_unlock(&mutex);
      }
      else
      {
-        pthread_cond_signal(&cond);
         pthread_mutex_unlock(&mutex);
+        pthread_cond_signal(&cond); 
      }
   } 
 }
@@ -175,9 +173,16 @@ void *printdata(void* arg)
     }  
     print("proceed");
     struct data *d = NULL;
-    pop_data(&d);
-    pthread_mutex_unlock(&mutex);
-
+    if(pop_data(&d))
+    {
+      pthread_mutex_unlock(&mutex);
+      pthread_cond_signal(&cond); // signal push
+    }
+    else
+    {
+      pthread_mutex_unlock(&mutex);
+    }
+    
     if(d)
     {
         print("data id = %d", d->id);
