@@ -60,6 +60,7 @@ struct data
   int id;
 };
 
+// circular queue
 struct queue
 {
    struct data *queue_data[256];
@@ -74,33 +75,44 @@ struct queue
 
 void push_data(struct data *d)
 {
-   if(g_queue.rear < g_queue.size)
+   if(isFull())
    {
-      g_queue.queue_data[++g_queue.rear] = d;
+     printf("Queue is full\n");
+     return;
    }
+   if(g_queue.front == -1)
+   {
+      g_queue.front = 0;
+   }
+   g_queue.rear = (g_queue.rear+1) % g_queue.size;
+   g_queue.queue_data[g_queue.rear] = d;
 }
 void pop_data(struct data **d)
 {
-  if(g_queue.front < g_queue.rear)
+  if(isEmpty())
   {
-    *d = g_queue.queue_data[++g_queue.front];
-
-    if(g_queue.front == g_queue.rear) // queue has no data after pop
-    {
-      g_queue.front = g_queue.rear = -1;
-    }
+     printf("Queue is empty\n");
+     return;
+  }
+  *d = g_queue[g_queue.front];
+  if(g_queue.front == g_queue.rear) // if last element is poped
+  {
+     g_queue.front = g_queue.rear = -1;
   }
   else
   {
-    print("Queue is empty");
+     g_queue.front = (g_queue.front + 1) % g_queue.size;
   }
 }
 
 int isEmpty()
 {
-   return g_queue.front >= g_queue.rear ? 1 : 0;
+   return (g_queue.front == g_queue.rear) ? 1 : 0;
 }
-
+int isFull()
+{
+  return ((g_queue.front == 0) && (g_queue.rear == g_queue.size -1)) || ((g_queue.rear+1) == g_queue.front);
+}
 
 void queue_work_data(struct data* d)
 {
