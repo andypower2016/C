@@ -7,45 +7,6 @@
 #include <pthread.h>
 
 #define print(format, args...) printf("[%s:%d]" format "\n", __FUNCTION__, __LINE__, ##args)
-/*sem_t sem;
-int sem_val;
-int count = 0;
-
-void printSemValue(char str[5])
-{
-  sem_getvalue(&sem, &sem_val);
-  printf("%s sem=%d\n",str, sem_val);
-}
-
-void* func_sem(void* args)
-{
-  struct arg *tmp = (struct arg*) args;
-  printf("thread %d waiting ...\n", tmp->id);
-  int ret = sem_wait(&sem);
-  if(ret == -1)
-  {
-    printf("sem is already zero\n");
-  }
-  printf("thread %d finished waiting ...\n", tmp->id);
-  return 0;
-}
-
-void* func_mutex(void* args)
-{
-  struct arg *tmp = (struct arg*) args;
-  printf("thread %d waiting ...\n", tmp->id);
-  pthread_mutex_lock(&mutex);
-  printf("thread %d aquired mutex ...\n", tmp->id);
-  int i = 0;
-  for(; i < 100 ; ++i)
-    count++;
-
-  pthread_cond_wait(&cond, &mutex);
-  printf("thread %d complete ...\n", tmp->id);
-  pthread_mutex_unlock(&mutex);
-  printf("thread %d released mutex ...\n", tmp->id);
-  return 0;
-}*/
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -199,19 +160,10 @@ void *printdata(void* arg)
 
 int main(int argc, char** argv)
 {
-    
-    //sem_init(&sem, 0, 1);    
     pthread_t t1, t2;
     pthread_create(&t1,0,run,(void*) &queue_work_data);
     pthread_create(&t2,0,printdata,NULL);
     pthread_join(t1, 0);
     pthread_join(t2, 0);
-    //sem_destroy(&sem);
-
-    /*struct data *d;
-    d = (struct data*) malloc(sizeof(struct data));
-    d->id = 6;
-    struct data *ptr = d;
-    printf("%d\n", ptr->id);*/
     return 0;
 }
