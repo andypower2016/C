@@ -70,15 +70,15 @@ struct queue
 } g_queue = {
   .front = -1,
   .rear = -1,
-  .size = 256,
+  .size = 5,
 };
 
-void push_data(struct data *d)
+int push_data(struct data *d)
 {
    if(isFull())
    {
      printf("Queue is full\n");
-     return;
+     return 0;
    }
    if(g_queue.front == -1)
    {
@@ -86,15 +86,16 @@ void push_data(struct data *d)
    }
    g_queue.rear = (g_queue.rear+1) % g_queue.size;
    g_queue.queue_data[g_queue.rear] = d;
+   return 1;
 }
-void pop_data(struct data **d)
+int pop_data(struct data **d)
 {
   if(isEmpty())
   {
      printf("Queue is empty\n");
-     return;
+     return 0;
   }
-  *d = g_queue[g_queue.front];
+  *d = g_queue.queue_data[g_queue.front];
   if(g_queue.front == g_queue.rear) // if last element is poped
   {
      g_queue.front = g_queue.rear = -1;
@@ -103,11 +104,12 @@ void pop_data(struct data **d)
   {
      g_queue.front = (g_queue.front + 1) % g_queue.size;
   }
+  return 1;
 }
 
 int isEmpty()
 {
-   return (g_queue.front == g_queue.rear) ? 1 : 0;
+   return (g_queue.front == -1) ? 1 : 0;
 }
 int isFull()
 {
@@ -119,10 +121,25 @@ void queue_work_data(struct data* d)
   if(d)
   {
      print("push data");
-     pthread_mutex_lock(&mutex);
-     push_data(d);
-     pthread_cond_signal(&cond);
-     pthread_mutex_unlock(&mutex);
+     pthread_mutex_lock(&mutex);    
+     int ret = push_data(d);
+     if(!ret)
+     {
+        while(!ret) // retry
+        {
+          pthread_mutex_unlock(&mutex);
+          pthread_cond_signal(&cond);
+          sleep(1);
+          pthread_mutex_lock(&mutex);    
+          ret = push_data(d);
+        }
+        pthread_mutex_unlock(&mutex);
+     }
+     else
+     {
+        pthread_cond_signal(&cond);
+        pthread_mutex_unlock(&mutex);
+     }
   } 
 }
 
@@ -134,7 +151,7 @@ void *run(void* fptr)
 {
   callback worker = ((void*)(struct data*) fptr);
   int i = 0;
-  while(i < 5)
+  while(i < 10)
   {
     // every 2 second gets data
     struct data *d = (struct data*) malloc(sizeof(struct data));
