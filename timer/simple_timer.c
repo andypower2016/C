@@ -15,7 +15,7 @@
 char time_info[256];
 
 void* setup_timer(void *arg);
-void timer_handler(int signal);
+void timer_handler(int signal, siginfo_t* siginfo, void *data);
 char* get_current_time();
 
 typedef struct timer_setting {
@@ -35,13 +35,37 @@ void* setup_timer(void *arg)
     
     timer_t timer;
     struct sigevent signal_event;
+    struct sigaction signal_action;
     struct itimerspec timer_spec;
+    sigset_t mask;
+
+    /* establishing handler for timer */
+    
+    /* struct sigaction
+     * { 
+     *    void (*sa_handler)(int);
+     *    void (*sa_sigaction)(int, siginfo_t *, void *);
+     *    sigset_t sa_mask;
+     *    int sa_flags;
+     *    void (*sa_restorer)(void);
+     * }
+     */
+    signal_action.sa_flags = SA_SIGINFO;
+    signal_action.sa_sigaction = timer_handler;
+    sigemptyset(&signal_action.sa_mask);
+    if(sigaction(ts_data->signal, &signal_action, NULL) == -1) {
+        print("sigaction error");
+        return NULL;
+    }
+    /* Block current signal */
+    //sigemptyset(&mask);
+    //sigaddset(&mask, ts_data->signal);
 
     /* setup signal event */
     signal_event.sigev_notify = SIGEV_SIGNAL;
-    signal_event.sigev_signo = ts.signal;
+    signal_event.sigev_signo = ts_data->signal;
     signal_event.sigev_value.sival_ptr = &timer;
-    signal(signal_event.sigev_signo, timer_handler);
+    //signal(signal_event.sigev_signo, timer_handler);
     
     /* create timer */  
     if(timer_create(CLOCKID, &signal_event, &timer) == -1) {
@@ -49,21 +73,21 @@ void* setup_timer(void *arg)
         exit(-1);
     }
     /* setup timer spec */
-    timer_spec.it_value.tv_sec = ts_data.delay;  /* timer start delay time */
+    timer_spec.it_value.tv_sec = ts_data->delay;  /* timer start delay time */
     timer_spec.it_value.tv_nsec = 0;
-    timer_spec.it_interval.tv_sec = ts_data.interval; /* time spacing */
+    timer_spec.it_interval.tv_sec = ts_data->interval; /* time spacing */
     timer_spec.it_interval.tv_nsec = 0;
 
     /* start timer */ 
     print("[%s] timer start", get_current_time());
-    if (timer_settime(timer, 0, &timer_spec, ts.data) == -1) {
+    if (timer_settime(timer, 0, &timer_spec, NULL) == -1) {
           print("[%s:%d] timer_settime fail", __FUNCTION__, __LINE__);
          exit(-1);
     }
     return 0;
 }
 
-void timer_handler(int signal, void *data)
+void timer_handler(int signal, siginfo_t* siginfo, void *data)
 {
     print("[%s] captured signal=%d , data=%s", get_current_time(), signal, (char*) data);
 }
@@ -101,9 +125,10 @@ int main(int argc, char *argv[])
     ts.interval = 2;
     ts.delay = 1;
     ts.signal = SIGALRM;
-    ts.data = (char*) malloc(sizeof(char)*256);
+    ts.data = (char*) malloc(256);
+    memset(ts.data, 0, 256);
     strcpy(ts.data, "abcd");
-    ts.data[4] = '\0';
+    
     
     pthread_t thread1;
     pthread_create(&thread1, 0, setup_timer, (void*) &ts);
