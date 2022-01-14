@@ -64,7 +64,7 @@ char* get_current_time()
     else {
         sprintf(time_info, "error occured");
     }
-    return &time_info;
+    return time_info;
 }
 
 void *run(void* arg)
