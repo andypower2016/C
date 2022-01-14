@@ -29,9 +29,10 @@ void* setup_timer(void *arg)
     signal(signal_event.sigev_signo, timer_handler);
     
     /* create timer */  
-    if(timer_create(CLOCKID, &signal_event, &timer) == -1)
+    if(timer_create(CLOCKID, &signal_event, &timer) == -1) {
+        print("[%s:%d] timer_create fail", __FUNCTION__, __LINE__);
         exit(-1);
-
+    }
     /* setup timer spec */
     timer_spec.it_value.tv_sec = 1;  /* timer start delay time */
     timer_spec.it_value.tv_nsec = 0;
@@ -40,9 +41,10 @@ void* setup_timer(void *arg)
 
     /* start timer */ 
     print("[%s] timer start", get_current_time());
-    if (timer_settime(timer, 0, &timer_spec, NULL) == -1)
+    if (timer_settime(timer, 0, &timer_spec, NULL) == -1) {
+          print("[%s:%d] timer_settime fail", __FUNCTION__, __LINE__);
          exit(-1);
-
+    }
     return 0;
 }
 
