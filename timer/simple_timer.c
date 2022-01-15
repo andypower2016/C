@@ -41,8 +41,8 @@ void* setup_timer(void *arg)
 
     /* establishing handler for timer */
     
-    /* struct sigaction
-     * { 
+    /*
+     * struct sigaction {
      *    void (*sa_handler)(int);
      *    void (*sa_sigaction)(int, siginfo_t *, void *);
      *    sigset_t sa_mask;
@@ -81,7 +81,7 @@ void* setup_timer(void *arg)
     /* start timer */ 
     print("[%s] timer start", get_current_time());
     if (timer_settime(timer, 0, &timer_spec, NULL) == -1) {
-          print("[%s:%d] timer_settime fail", __FUNCTION__, __LINE__);
+         print("[%s:%d] timer_settime fail", __FUNCTION__, __LINE__);
          exit(-1);
     }
     return 0;
@@ -110,8 +110,7 @@ char* get_current_time()
 
 void *run(void* arg)
 {
-    while(1)
-    {
+    while(1) {
         int left = sleep(5);
         print("[%s] left=%d", get_current_time(), left);
     }
